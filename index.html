@@ -1,0 +1,2601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>+EV Best Ball Draft Assistant</title>
+<style>
+  :root { 
+    --bg:#0b0f16; 
+    --pane:#121826; 
+    --muted:#6b7280; 
+    --accent:#10b981; 
+    --warn:#ef4444; 
+    --card:#1a2233;
+    --border:#1d283a;
+    --text:#e7eef7;
+    --blue:#3b82f6;
+  }
+  
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  html, body { 
+    background: linear-gradient(135deg,#0b0f16,#0e1420); 
+    color: var(--text); 
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  }
+  
+  /* header */
+  header { 
+    display: flex; 
+    gap: 16px; 
+    align-items: center; 
+    padding: 12px 20px; 
+    background: rgba(11,15,22,0.95); 
+    backdrop-filter: blur(12px); 
+    border-bottom: 1px solid var(--border);
+    height: 60px;
+  }
+  
+  header h1 { 
+    font-size: 20px; 
+    font-weight: 700;
+    color: #ef4444;
+    margin-right: auto;
+  }
+  
+  /* select */
+  select { 
+    background: var(--pane); 
+    color: var(--text); 
+    border: 1px solid var(--border); 
+    border-radius: 8px; 
+    padding: 8px 32px 8px 12px;
+    font-size: 14px;
+    appearance: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 80px;
+  }
+  
+  select:hover {
+    border-color: var(--blue);
+  }
+  
+  /* file input */
+  .file-input-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+  
+  .file-input-wrapper input[type="file"] {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+  }
+  
+  .file-input-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--pane);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    height: 36px;
+  }
+  
+  .file-input-label:hover {
+    border-color: var(--blue);
+    background: rgba(59, 130, 246, 0.1);
+  }
+  
+  /* buttons */
+  .btn {
+    background: var(--pane);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+  }
+  
+  .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  
+  .btn-danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--warn);
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+  
+  .btn-danger:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: var(--warn);
+  }
+  
+  .btn-primary {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--blue);
+    border-color: rgba(59, 130, 246, 0.3);
+  }
+  
+  .btn-primary:hover {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: var(--blue);
+  }
+  .wrap { 
+    display: grid; 
+    grid-template-columns: 1fr 340px; 
+    height: calc(100vh - 60px);
+    overflow: hidden;
+  }
+  
+  .main-panel { 
+    padding: 20px;
+    overflow-y: auto;
+  }
+  
+  .sidebar {
+    background: var(--pane);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  
+  .panel { 
+    background: transparent; 
+  }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .stats { display:flex; gap:10px; flex-wrap:wrap; }
+  .stat { background:#141c2a; border:1px solid #1f2d44; border-radius:12px; padding:8px 12px; font-size:12px; }
+  .stat b { color:#cde2ff; }
+  
+  /* card styles */
+  #cards .card { 
+    background: linear-gradient(135deg, #18181b 0%, #27272a 100%);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;  /* was 16px */
+    padding: 17px;         /* was 20px */
+    margin-bottom: 10px;   /* was 12px */
+    display: grid;
+    grid-template-columns: 60px 1fr auto;  /* was 70px */
+    gap: 17px;             /* was 20px */
+    align-items: center;
+    transition: all 0.3s ease;
+  }
+  #cards .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 17px 34px rgba(0,0,0,0.5);  /* was 20px 40px */
+    border-color: rgba(255,255,255,0.15);
+  }
+  
+  /* urgency colors */
+  #cards .card-red {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.22) 100%);
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+  #cards .card-red:hover {
+    border-color: rgba(239, 68, 68, 0.7);
+  }
+  
+  #cards .card-orange {
+    background: linear-gradient(135deg, rgba(251, 146, 60, 0.12) 0%, rgba(234, 88, 12, 0.18) 100%);
+    border-color: rgba(251, 146, 60, 0.45);
+  }
+  #cards .card-orange:hover {
+    border-color: rgba(251, 146, 60, 0.65);
+  }
+  
+  #cards .card-yellow {
+    background: linear-gradient(135deg, rgba(250, 204, 21, 0.10) 0%, rgba(217, 119, 6, 0.15) 100%);
+    border-color: rgba(250, 204, 21, 0.4);
+  }
+  #cards .card-yellow:hover {
+    border-color: rgba(250, 204, 21, 0.6);
+  }
+  
+  /* adp box */
+  .adp-box {
+    width: 60px;           /* was 70px */
+    height: 60px;          /* was 70px */
+    background: linear-gradient(135deg, #dc2626, #991b1b);
+    border-radius: 12px;   /* was 14px */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .adp-label {
+    font-size: 9px;        /* was 10px */
+    font-weight: 600;
+    color: rgba(255,255,255,0.7);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .adp-value {
+    font-size: 20px;       /* was 24px */
+    font-weight: 900;
+    color: #ffffff;
+  }
+  
+  /* player section */
+  .player-section { flex: 1; }
+  .player-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;             /* was 14px */
+    margin-bottom: 9px;    /* was 10px */
+  }
+  .player-name {
+    font-size: 20px;       /* was 24px */
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.5px;
+  }
+  
+  /* position badges */
+  .position {
+    color: #ffffff;
+    padding: 4px 12px;     /* was 5px 14px */
+    border-radius: 7px;    /* was 8px */
+    font-weight: 700;
+    font-size: 11px;       /* was 13px */
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .position.QB { background: linear-gradient(135deg, #dc2626, #991b1b); }
+  .position.RB { background: linear-gradient(135deg, #10b981, #059669); }
+  .position.WR { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+  .position.TE { background: linear-gradient(135deg, #f59e0b, #d97706); }
+  
+  .team-badge {
+    background: rgba(255,255,255,0.1);
+    color: #9ca3af;
+    padding: 4px 12px;     /* was 5px 14px */
+    border-radius: 7px;    /* was 8px */
+    font-weight: 600;
+    font-size: 11px;       /* was 13px */
+  }
+  
+  .player-stats {
+    display: flex;
+    gap: 24px;             /* was 28px */
+  }
+  .stat-item {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;              /* was 6px */
+  }
+  .stat-value {
+    font-size: 15px;       /* was 18px */
+    font-weight: 700;
+    color: #10b981;
+  }
+  .stat-label {
+    font-size: 9px;        /* was 11px */
+    color: #6b7280;
+    text-transform: uppercase;
+  }
+  
+  /* right section */
+  .right-section {
+    display: flex;
+    align-items: center;
+    gap: 14px;             /* was 16px */
+  }
+  .ev-score {
+    text-align: center;
+    padding: 0 14px;       /* was 0 16px */
+  }
+  .ev-label {
+    font-size: 9px;        /* was 10px */
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 2px;
+  }
+  .ev-value {
+    font-size: 26px;       /* was 30px */
+    font-weight: 900;
+    background: linear-gradient(135deg, #10b981, #059669);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  /* compatibility */
+  .meta { font-size:12px; color:var(--muted); }
+  .name { font-weight:700; color:#d4e7ff; font-size:16px; }
+  .pos { font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid #2b3d5f; background:#0f1522; }
+  .pts { color:var(--accent); font-weight:700; }
+  
+  /* button container */
+  .actions { 
+    display: flex !important; 
+    flex-direction: row !important;
+    gap: 9px !important;   /* was 10px */
+  }
+  
+  /* action buttons */
+  .btn-draft, .btn-pass {
+    width: 43px !important;        /* was 50px */
+    height: 43px !important;       /* was 50px */
+    border-radius: 10px;           /* was 12px */
+    border: none;
+    cursor: pointer;
+    font-size: 19px !important;    /* was 22px */
+    font-weight: bold;
+    transition: all 0.2s;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .btn-draft {
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+    color: white !important;
+  }
+  .btn-draft:hover {
+    transform: scale(1.1);
+    box-shadow: 0 7px 17px rgba(16, 185, 129, 0.4);  /* was 8px 20px */
+  }
+  .btn-pass {
+    background: rgba(239, 68, 68, 0.15) !important;
+    border: 2px solid rgba(239, 68, 68, 0.3) !important;
+    color: #ef4444 !important;
+  }
+  .btn-pass:hover {
+    background: rgba(239, 68, 68, 0.25) !important;
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+  
+  /* cleanup */
+  .actions button { display: none; }
+  .actions .ok { display: none; }
+  .actions .no { display: none; }
+  
+  /* badges */
+  .badge { font-size:10px; padding:3px 8px; border-radius:8px; border:1px solid #37537c; background:#0e1726; }
+  .badge.stack { border-color:#385c3f; background:#112417; color:#b6f4c9; }
+  .badge.top { border-color:#6a516e; background:#241229; color:#f5c2ff; }
+  
+  /* search card */
+  .search-card {
+    background: linear-gradient(135deg, #18181b 0%, #27272a 100%);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;          /* was 16px */
+    padding: 17px;                /* was 20px */
+    margin-bottom: 17px;          /* was 20px */
+    display: flex;
+    align-items: center;
+    gap: 14px;                    /* was 16px */
+  }
+  .search-icon {
+    width: 43px;                  /* was 50px */
+    height: 43px;                 /* was 50px */
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    border-radius: 10px;          /* was 12px */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;              /* was 24px */
+  }
+  .search-input {
+    flex: 1;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;          /* was 12px */
+    padding: 12px 17px;           /* was 14px 20px */
+    font-size: 14px;              /* was 16px */
+    color: #ffffff;
+    transition: all 0.2s;
+  }
+  .search-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: rgba(255,255,255,0.08);
+  }
+  .search-input::placeholder {
+    color: #6b7280;
+  }
+  .search-clear {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+    padding: 9px 17px;            /* was 10px 20px */
+    border-radius: 9px;           /* was 10px */
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;              /* added explicit font-size */
+    transition: all 0.2s;
+  }
+  .search-clear:hover {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+  #roster .slot { background:#121b2b; border:1px solid #21324f; border-radius:12px; padding:8px 10px; margin:6px 0; font-size:13px; }
+  .footer { padding:10px 18px; color:#89a2c2; font-size:12px; }
+  .debug { background:#2a1717; color:#ff9999; padding:8px; margin:10px; border-radius:8px; font-size:12px; }
+  
+  /* roster */
+  .roster-section {
+    padding: 12px 16px;
+    margin-top: -4px;  /* Slight adjustment to align with other columns */
+  }
+  
+  .roster-section h3 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  
+  .roster-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  
+  .roster-tab {
+    flex: 1;
+    min-width: 120px;
+    padding: 8px 12px;
+    background: rgba(26, 34, 51, 0.5);
+    border: 1px solid transparent;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  
+  .roster-tab:hover {
+    background: rgba(26, 34, 51, 0.8);
+  }
+  
+  .roster-tab.active {
+    background: var(--card);
+    border-color: var(--blue);
+    color: var(--blue);
+  }
+  
+  .roster-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  
+  .roster-action-btn {
+    flex: 1;
+    padding: 10px 16px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    height: 40px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+  }
+  
+  /* multi-roster */
+  .rosters-display {
+    display: flex;
+    gap: 0;
+    flex: 1;
+    overflow: hidden;
+  }
+  
+  .roster-column {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  
+  #roster, #roster2 {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    max-width: 100%;
+  }
+  
+  #roster .slot, #roster2 .slot { 
+    background: var(--card); 
+    border: 1px solid var(--border); 
+    border-radius: 8px; 
+    padding: 12px 14px; 
+    margin: 8px 0; 
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  #roster .slot:hover, #roster2 .slot:hover {
+    border-color: rgba(59, 130, 246, 0.3);
+    transform: translateX(2px);
+  }
+  
+  .pts { 
+    color: var(--accent); 
+    font-weight: 600; 
+  }
+  
+  /* layout */
+  .app-container {
+    display: flex;
+    height: calc(100vh - 60px);
+    overflow: hidden;
+  }
+  
+  /* cards panel */
+  .main-panel {
+    flex: 1 1 auto;
+    padding: 20px;
+    overflow-y: auto;
+    min-width: 400px;
+    background: var(--bg);
+  }
+  
+  /* Right sidebar */
+  .sidebar {
+    width: 360px;
+    background: var(--pane);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-width: 300px;
+    max-width: 800px;
+    padding-top: 20px;
+    border-left: 1px solid var(--border);
+  }
+  
+  .btn-small {
+    padding: 4px 12px !important;
+    font-size: 12px !important;
+    height: 28px !important;
+  }
+  
+  /* Status bar */
+  .status-bar {
+    padding: 12px 20px;
+    background: rgba(18, 24, 38, 0.5);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: -20px -20px 20px -20px;
+  }
+  
+  .status-info {
+    display: flex;
+    gap: 16px;
+    font-size: 13px;
+  }
+  
+  .status-item {
+    color: var(--text);
+  }
+  
+  .profile-badge {
+    padding: 6px 12px;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--accent);
+  }
+  
+  .roster-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+  }
+  
+  /* Roster position sections */
+  .roster-position {
+    margin-bottom: 20px;
+  }
+  
+  .roster-position-title {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+    margin: 0 0 8px 0;
+    font-weight: 600;
+  }
+  
+  .roster-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  /* Clean roster cards with proper alignment */
+  .roster-card {
+    background: linear-gradient(135deg, #18181b 0%, #27272a 100%);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 17px;
+    margin-bottom: 10px;
+    display: grid;
+    grid-template-columns: 60px 1fr auto auto;
+    gap: 17px;
+    align-items: center;
+    transition: all 0.3s ease;
+  }
+  
+  .roster-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 17px 34px rgba(0,0,0,0.5);
+    border-color: rgba(255,255,255,0.15);
+  }
+  
+  .roster-card.roster-starter {
+    border-color: rgba(59, 130, 246, 0.4);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(59, 130, 246, 0.08) 100%);
+  }
+  
+  .roster-card.roster-starter:hover {
+    border-color: rgba(59, 130, 246, 0.6);
+  }
+  
+  /* Position box - replaces rank box */
+  .roster-position-box {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-weight: 900;
+    font-size: 18px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  .roster-position-box.QB { background: linear-gradient(135deg, #dc2626, #991b1b); }
+  .roster-position-box.RB { background: linear-gradient(135deg, #10b981, #059669); }
+  .roster-position-box.WR { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+  .roster-position-box.TE { background: linear-gradient(135deg, #f59e0b, #d97706); }
+  
+  /* Player info section */
+  .roster-player-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+  }
+  
+  .roster-player-name {
+    font-size: 20px;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.5px;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .roster-player-meta {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  /* Projection score */
+  .roster-projection {
+    font-size: 20px;
+    font-weight: 800;
+    color: #10b981;
+    letter-spacing: -0.5px;
+    text-align: right;
+    white-space: nowrap;
+  }
+  
+  .roster-remove-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  
+  .roster-remove-btn:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+    transform: scale(1.1);
+  }
+  
+  /* Redesigned totals section - bigger and cleaner */
+  .roster-totals {
+    margin-top: 24px;
+    padding: 24px;
+    background: rgba(16, 185, 129, 0.05);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .roster-total-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .roster-total-label {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.2px;
+  }
+  
+  .roster-total-value {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+  
+  /* Position count badges */
+  .roster-position-counts {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+  
+  .roster-count-badge {
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 14px;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .roster-count-badge.QB { background: linear-gradient(135deg, #dc2626, #991b1b); }
+  .roster-count-badge.RB { background: linear-gradient(135deg, #10b981, #059669); }
+  .roster-count-badge.WR { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+  .roster-count-badge.TE { background: linear-gradient(135deg, #f59e0b, #d97706); }
+  
+  /* Sticky urgent chips */
+  #stickyUrgentContainer {
+    margin-bottom: 20px;
+  }
+  
+  .urgent-chip {
+    background: linear-gradient(135deg, #18181b 0%, #27272a 100%);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 14px;
+    padding: 12px 17px;
+    margin-bottom: 6px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 12px;
+    align-items: center;
+    min-height: 70px;
+    transition: all 0.3s ease;
+  }
+  
+  .urgent-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+  
+  .urgent-chip.chip-red { border-color: rgba(239, 68, 68, 0.5); }
+  .urgent-chip.chip-orange { border-color: rgba(251, 146, 60, 0.5); }
+  .urgent-chip.chip-yellow { border-color: rgba(250, 204, 21, 0.5); }
+  
+  .chip-adp {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    min-width: 45px;
+  }
+  
+  .chip-adp-label {
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+  }
+  
+  .chip-adp-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: #ffffff;
+  }
+  
+  .chip-main {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+  }
+  
+  .chip-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .chip-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .chip-position {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #ffffff;
+    text-transform: uppercase;
+  }
+  
+  .chip-position.QB { background: linear-gradient(135deg, #dc2626, #991b1b); }
+  .chip-position.RB { background: linear-gradient(135deg, #10b981, #059669); }
+  .chip-position.WR { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+  .chip-position.TE { background: linear-gradient(135deg, #f59e0b, #d97706); }
+  
+  .chip-team {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  
+  .chip-stats {
+    display: flex;
+    gap: 12px;
+  }
+  
+  .chip-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .chip-stat-value {
+    font-size: 13px;
+    font-weight: 700;
+    color: #10b981;
+  }
+  
+  .chip-stat-label {
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 1px;
+  }
+  
+  .chip-actions {
+    display: flex;
+    gap: 6px;
+  }
+  
+  .chip-btn {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: none;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  
+  .chip-draft {
+    background: rgba(16, 185, 129, 0.8);
+    color: #ffffff;
+  }
+  
+  .chip-draft:hover {
+    background: rgba(16, 185, 129, 1);
+    transform: scale(1.1);
+  }
+  
+  .chip-pass {
+    background: rgba(239, 68, 68, 0.8);
+    color: #ffffff;
+  }
+  
+  .chip-pass:hover {
+    background: rgba(239, 68, 68, 1);
+    transform: scale(1.1);
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: rgba(107, 114, 128, 0.3);
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(107, 114, 128, 0.5);
+  }
+  
+  /* Resizable divider */
+  .divider {
+    width: 4px;
+    background: var(--border);
+    cursor: col-resize;
+    position: relative;
+    transition: background 0.2s;
+  }
+  
+  .divider:hover {
+    background: var(--blue);
+  }
+  
+  .divider:active {
+    background: var(--accent);
+  }
+  
+  .divider::before {
+    content: '';
+    position: absolute;
+    left: -2px;
+    right: -2px;
+    top: 0;
+    bottom: 0;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>BBGM</h1>
+  
+  <select id="draftSlot" title="Draft Slot"></select>
+  
+  <button class="btn btn-danger" id="clearBtn" onclick="clearDraft()">
+    Clear
+  </button>
+  
+  <button class="btn btn-primary" id="undoBtn" onclick="undo()">
+    ↶ Undo
+  </button>
+  
+  <div class="file-input-wrapper">
+    <input type="file" id="rgdkFile" accept=".csv"/>
+    <label class="file-input-label" for="rgdkFile">
+      📊 RGDK Rankings
+    </label>
+  </div>
+  
+  <div class="file-input-wrapper">
+    <input type="file" id="udr4File" accept=".csv"/>
+    <label class="file-input-label" for="udr4File">
+      📈 UD Round-4
+    </label>
+  </div>
+</header>
+<div class="app-container">
+  <main class="main-panel" id="mainPanel">
+    <div class="status-bar">
+      <div class="status-info">
+        <span id="roundInfo" class="status-item">Round —</span>
+      </div>
+      <div class="profile-badge" id="profileBadge">Profile: —</div>
+    </div>
+    <div id="debug"></div>
+    <div id="stickyUrgentContainer" style="display:none;">
+      <h4 style="margin:6px 0; font-size:12px; text-transform:uppercase; color:var(--muted); letter-spacing:0.5px;">Needs Confirmation (recently urgent)</h4>
+      <div id="stickyUrgent"></div>
+    </div>
+    <div id="cards"><div class="meta">Load both CSVs to begin.</div></div>
+  </main>
+
+  <div class="divider" id="divider1"></div>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="roster-section">
+      <h3>My Rosters</h3>
+      <div id="rosterList"></div>
+    </div>
+    <div class="rosters-display" id="rostersDisplay">
+      <div class="roster-column">
+        <div id="roster"></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+/*** ---------- Utilities ---------- ***/
+function detectDelim(line){ return line.includes('\t')?'\t':','; }
+function splitCSV(line, d){ 
+  let a=[],c='',q=false;
+  for(let i=0;i<line.length;i++){ 
+    const ch=line[i];
+    if(ch==='"'){       if(q&&line[i+1]==='"'){c+='"';i++;} else q=!q; 
+    }
+    else if(ch===d && !q){ a.push(c.trim()); c=''; } 
+    else c+=ch;
+  } 
+  a.push(c.trim()); 
+  return a;
+}
+
+function quantile(arr,q){ 
+  if(!arr.length) return 0; 
+  const a=[...arr].sort((x,y)=>x-y);
+  const i=(a.length-1)*q, lo=Math.floor(i), hi=Math.ceil(i);
+  return lo===hi?a[lo]:a[lo]+(i-lo)*(a[hi]-a[lo]);
+}
+
+function modeInt(arr){ 
+  const m=new Map(); 
+  arr.forEach(x=>m.set(x,(m.get(x)||0)+1));
+  let best=[null,-1]; 
+  m.forEach((c,x)=>{ if(c>best[1]) best=[x,c]; }); 
+  return best[0]??0; 
+}
+
+function showDebug(msg) {
+  const d = document.getElementById('debug');
+  d.innerHTML = `<div class="debug">${msg}</div>`;
+  console.log('Debug:', msg);
+}
+
+/*** ---------- State ---------- ***/
+let players=[];  // from RGDK file
+let available=[];  // working pool
+let roster={QB:[],RB:[],WR:[],TE:[]};
+let totalPicks=0;
+let removedPlayers = [];  // x'd players
+let searchQuery = '';  // search filter
+const DRAFT={teams:12,mySlot:1};
+let PROFILE={ 
+  targets:{QB:{min:2,optimal:2,max:3},RB:{min:5,optimal:6,max:7},WR:{min:8,optimal:9,max:10},TE:{min:2,optimal:2,max:3}},
+  desiredPassCatchersPerQB:2.0, 
+  timing:{RB:6,QB:8,WR:2,TE:7} 
+};
+
+// caches
+let scoreCache = new Map();  // EV scores
+let replCache = new Map();  // replacement values
+let probCache = new Map();  // probabilities
+
+// clear caches
+function clearCaches() {
+  scoreCache.clear();
+  replCache.clear();
+  probCache.clear();
+}
+
+// rosters & undo
+let rosters = [];  // saved rosters
+let currentRosterIndex = 0;
+let actionHistory = [];  // undo/redo
+let historyIndex = -1;  // history position
+
+/*** ---------- Undo/Redo Functions ---------- ***/
+function saveAction(action) {
+  // save current state for undo
+  const currentState = {
+    type: 'state',
+    roster: JSON.parse(JSON.stringify(roster)),
+    available: [...available],
+    removedPlayers: [...removedPlayers],
+    totalPicks: totalPicks
+  };
+  
+  // remove actions after current position
+  actionHistory = actionHistory.slice(0, historyIndex + 1);
+  
+  // Add current state to history
+  actionHistory.push(currentState);
+  historyIndex++;
+  
+  // Limit history to last 50 actions
+  if (actionHistory.length > 50) {
+    actionHistory.shift();
+    historyIndex--;
+  }
+}
+
+function undo() {
+  if (actionHistory.length === 0 || historyIndex < 0) {
+    showDebug('Nothing to undo');
+    return;
+  }
+  
+  // Get the previous state
+  const state = actionHistory[historyIndex];
+  roster = JSON.parse(JSON.stringify(state.roster));
+  available = [...state.available];
+  removedPlayers = [...state.removedPlayers];
+  totalPicks = state.totalPicks;
+  
+  // clear caches
+  clearCaches();
+  
+  // Move history pointer back
+  historyIndex--;
+  
+  // Update roster in array
+  if (rosters[currentRosterIndex]) {
+    rosters[currentRosterIndex].roster = JSON.parse(JSON.stringify(roster));
+    rosters[currentRosterIndex].totalPicks = totalPicks;
+    rosters[currentRosterIndex].removedPlayers = [...removedPlayers];
+  }
+  
+  saveState();
+  renderRoster();
+  updateStats();
+  renderCards();
+  renderRosterList();  // Update roster list
+  showDebug('Action undone');
+}
+
+// Redo functionality removed - only undo is available
+
+/*** ---------- Multiple Roster Management ---------- ***/
+function loadRosters() {
+  try {
+    const saved = localStorage.getItem('bbgm_rosters');
+    if (saved) {
+      rosters = JSON.parse(saved);
+    } else {
+      // ONE-TIME MIGRATION from old system to new
+      const oldRoster = localStorage.getItem('bbgm_roster');
+      const oldPicks = localStorage.getItem('bbgm_totalPicks');
+      const oldRemoved = localStorage.getItem('bbgm_removedPlayers');
+      
+      if (oldRoster) {
+        const migrated = {
+          name: 'My Roster',
+          roster: JSON.parse(oldRoster),
+          totalPicks: parseInt(oldPicks || '0'),
+          removedPlayers: JSON.parse(oldRemoved || '[]'),
+          created: Date.now()
+        };
+        
+        // Check if it has actual data
+        const r = migrated.roster;
+        if (r.QB?.length > 0 || r.RB?.length > 0 || r.WR?.length > 0 || r.TE?.length > 0) {
+          rosters = [migrated];
+          currentRosterIndex = 0;
+          saveRosters(); // Save immediately to new system
+          
+          // Clean up old keys after successful migration
+          localStorage.removeItem('bbgm_roster');
+          localStorage.removeItem('bbgm_totalPicks');
+          localStorage.removeItem('bbgm_removedPlayers');
+          
+          showDebug('Roster migrated from old system!');
+        } else {
+          rosters = [];
+        }
+      } else {
+        rosters = [];
+      }
+    }
+    
+    // Ensure at least one roster exists
+    if (rosters.length === 0) {
+      createNewRoster();
+    }
+  } catch(e) {
+    console.log('Could not load rosters:', e);
+    rosters = [];
+    createNewRoster();
+  }
+}
+
+function saveRosters() {
+  try {
+    localStorage.setItem('bbgm_rosters', JSON.stringify(rosters));
+  } catch(e) {
+    console.log('Could not save rosters:', e);
+  }
+}
+
+function saveCurrentRoster() {
+  const rosterName = prompt('Save roster as:', `Roster ${Date.now().toString().slice(-6)}`);
+  if (!rosterName) return;
+  
+  const savedRoster = {
+    name: rosterName,
+    roster: JSON.parse(JSON.stringify(roster)),
+    totalPicks: totalPicks,
+    removedPlayers: [...removedPlayers],
+    saved: Date.now()
+  };
+  
+  // save with unique key
+  const savedRosters = JSON.parse(localStorage.getItem('bbgm_saved_rosters') || '[]');
+  savedRosters.push(savedRoster);
+  localStorage.setItem('bbgm_saved_rosters', JSON.stringify(savedRosters));
+  
+  showDebug(`Roster "${rosterName}" saved locally`);
+}
+
+function createNewRoster() {
+  // Check if current roster has players
+  const hasPlayers = roster.QB.length > 0 || roster.RB.length > 0 || roster.WR.length > 0 || roster.TE.length > 0;
+  
+  if (hasPlayers) {
+    const shouldSave = confirm('You have players in your current roster. Save it first?');
+    if (shouldSave) {
+      saveCurrentRoster();
+    }
+  }
+  
+  // Clear current roster
+  roster = {QB:[],RB:[],WR:[],TE:[]};
+  totalPicks = 0;
+  removedPlayers = [];
+  available = [...players]; // Reset available players
+  liveDraftPick = 1; // Reset draft position
+  
+  // clear caches
+  clearCaches();
+  
+  // Clear action history
+  actionHistory = [];
+  historyIndex = -1;
+  
+  saveState();
+  renderRoster();
+  updateStats();
+  renderCards();
+  showDebug('New roster created');
+}
+
+function loadRoster(index) {
+  if (index < 0 || index >= rosters.length) return;
+  
+  // Save current roster before switching
+  if (rosters[currentRosterIndex]) {
+    rosters[currentRosterIndex].roster = JSON.parse(JSON.stringify(roster));
+    rosters[currentRosterIndex].totalPicks = totalPicks;
+    rosters[currentRosterIndex].removedPlayers = [...removedPlayers];
+  }
+  
+  currentRosterIndex = index;
+  const r = rosters[index];
+  roster = JSON.parse(JSON.stringify(r.roster));
+  totalPicks = r.totalPicks;
+  removedPlayers = [...r.removedPlayers];
+  
+  // Rebuild available list
+  if (players.length > 0) {
+    available = players.filter(p => 
+      !roster.QB.some(r=>r.name===p.name) &&
+      !roster.RB.some(r=>r.name===p.name) &&
+      !roster.WR.some(r=>r.name===p.name) &&
+      !roster.TE.some(r=>r.name===p.name) &&
+      !removedPlayers.includes(p.name)
+    );
+  }
+  
+  // Clear action history when switching rosters
+  actionHistory = [];
+  historyIndex = -1;
+  
+  saveRosters();
+  renderRoster();
+  updateStats();
+  renderCards();
+  renderRosterList();
+}
+
+function deleteRoster(index) {
+  if (rosters.length <= 1) {
+    showDebug('Cannot delete last roster');
+    return;
+  }
+  
+  if (!confirm(`Delete ${rosters[index].name}?`)) return;
+  
+  rosters.splice(index, 1);
+  
+  // Adjust current index if needed
+  if (currentRosterIndex >= rosters.length) {
+    currentRosterIndex = rosters.length - 1;
+  } else if (currentRosterIndex > index) {
+    currentRosterIndex--;
+  }
+  
+  loadRoster(currentRosterIndex);
+  saveRosters();
+  renderRosterList();
+}
+
+function renderRosterList() {
+  const container = document.getElementById('rosterList');
+  if (!container) return;
+  
+  // Simple header with save/new buttons
+  const actions = `
+    <div class="roster-actions">
+      <button class="btn btn-primary roster-action-btn" onclick="saveCurrentRoster()">💾 Save</button>
+      <button class="btn btn-primary roster-action-btn" onclick="createNewRoster()">+ New</button>
+    </div>
+  `;
+  
+  container.innerHTML = actions;
+}
+
+/*** ---------- Persistence ---------- ***/
+let saveTimeout;
+function saveState() {
+  // Debounce saves to prevent excessive localStorage writes
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    try {
+      // Save current working roster (persists through refreshes)
+      localStorage.setItem('bbgm_current_roster', JSON.stringify(roster));
+      localStorage.setItem('bbgm_current_picks', totalPicks.toString());
+      localStorage.setItem('bbgm_current_removed', JSON.stringify(removedPlayers));
+      localStorage.setItem('bbgm_live_pick', liveDraftPick.toString());
+      
+      // Save other items
+      localStorage.setItem('bbgm_draftSlot', DRAFT.mySlot);
+      localStorage.setItem('bbgm_players', JSON.stringify(players));
+      localStorage.setItem('bbgm_profile', JSON.stringify(PROFILE));
+    } catch(e) {
+      console.log('Could not save to localStorage:', e);
+    }
+  }, 500);  // 500ms delay to batch multiple saves
+}
+
+function loadState() {
+  try {
+    // Load non-roster items
+    const savedSlot = localStorage.getItem('bbgm_draftSlot');
+    const savedProfile = localStorage.getItem('bbgm_profile');
+    
+    if(savedSlot) DRAFT.mySlot = parseInt(savedSlot);
+    if(savedProfile) PROFILE = JSON.parse(savedProfile);
+    
+    // Load current working roster (persists through refreshes)
+    const savedRoster = localStorage.getItem('bbgm_current_roster');
+    const savedPicks = localStorage.getItem('bbgm_current_picks');
+    const savedRemoved = localStorage.getItem('bbgm_current_removed');
+    const savedLivePick = localStorage.getItem('bbgm_live_pick');
+    
+    if (savedRoster && savedPicks && savedRemoved) {
+      roster = JSON.parse(savedRoster);
+      totalPicks = parseInt(savedPicks);
+      removedPlayers = JSON.parse(savedRemoved);
+      showDebug('Current roster restored from previous session');
+    }
+    
+    if (savedLivePick) {
+      liveDraftPick = parseInt(savedLivePick);
+    }
+  } catch(e) {
+    console.log('Could not load from localStorage:', e);
+  }
+}
+
+function clearDraft() {
+  roster = {QB:[],RB:[],WR:[],TE:[]};
+  totalPicks = 0;
+  removedPlayers = [];
+  available = [...players];
+  
+  // Reset live draft pick to 1
+  liveDraftPick = 1;
+  
+  // Clear sticky urgent set
+  stickyUrgent.clear();
+  
+  // Clear all caches
+  clearCaches();
+  
+  // Update current roster in rosters array
+  if (rosters[currentRosterIndex]) {
+    rosters[currentRosterIndex].roster = {QB:[],RB:[],WR:[],TE:[]};
+    rosters[currentRosterIndex].totalPicks = 0;
+    rosters[currentRosterIndex].removedPlayers = [];
+  }
+  
+  saveState();
+  renderRoster();
+  updateStats();
+  renderCards();
+}
+
+/*** ---------- Draft geometry ---------- ***/
+// live draft pick
+let liveDraftPick = 1;
+
+function currentPick(){ 
+  return liveDraftPick;
+}
+
+function advanceDraftPick() {
+  liveDraftPick++;
+}
+
+// Sticky urgent strip functionality
+const stickyUrgent = new Set();
+const RED_URGENCY = 20; // same units as urgencyPressure output (lowered from 30)
+
+function updateStickyUrgent(players){
+  const pick = currentPick();
+  
+  // Check if it's currently my turn - if so, no urgency needed
+  const r = Math.ceil(pick/DRAFT.teams);
+  const myPickInRound = (r%2) ? DRAFT.mySlot : DRAFT.teams - DRAFT.mySlot + 1;
+  const myCurrentPick = (r-1) * DRAFT.teams + myPickInRound;
+  
+  if (pick === myCurrentPick) {
+    // It's my turn - no urgency for anyone
+    return;
+  }
+  
+  // Add players who are past their ADP but still available (main sticky logic)
+  for (const p of players){
+    if (isFinite(p.adp) && p.adp < pick) {
+      stickyUrgent.add(p.name);
+    }
+  }
+}
+function startOfRound(r,T=DRAFT.teams){ return (r-1)*T+1; }
+function picksToNextMine(pickNow, slot=DRAFT.mySlot, T=DRAFT.teams){
+  const r=Math.ceil(pickNow/T), posCur=(r%2?slot:T-slot+1);
+  const myCur=(r-1)*T + posCur;
+  if (pickNow <= myCur) return (myCur - pickNow) + (T - posCur)*2;  // to your pick + full snake to next
+  const r2=r+1, pos2=(r2%2?slot:T-slot+1), myNext=r*T + pos2;
+  return myNext - pickNow;
+}
+function roundString(){ 
+  const p=currentPick(); 
+  const r=Math.ceil(p/DRAFT.teams); 
+  return `Round ${r} · Pick ${p}`; 
+}
+
+/*** ---------- Probability helpers ---------- ***/
+function normCdf(x){ 
+  const t=1/(1+0.2316419*Math.abs(x));  const d=0.3989423*Math.exp(-x*x/2);
+  const p=d*t*(1.330274429 + t*(-1.821255978 + t*(1.781477937 + t*(-0.356563782 + t*0.319381530))));
+  return x>=0 ? 1-p : p;
+}
+// Removed - using getADPVariance consistently
+function probAvailableAtNext(adp, pickNow, window){
+  if(!isFinite(adp)) return 0;
+  const variance = getADPVariance(pickNow);
+  const z = ((pickNow + window) - adp) / variance;
+  return Math.max(0, Math.min(1, 1 - normCdf(z)));
+}
+
+// Round-aware ADP variance for better probability estimates
+function getADPVariance(pick) {
+  if (pick <= 36)  return 4;   // Rounds 1-3: tight variance
+  if (pick <= 120) return 8;   // Rounds 4-10: medium variance
+  return 12;                   // Rounds 11+: wide variance
+}
+
+// Check if player is likely off the board already
+function likelyOffBoard(p){
+  const pick = currentPick();
+  const buf = Math.max(1, Math.round(getADPVariance(pick) / 4)); // 4→1, 8→2, 12→3
+  return isFinite(p.adp) && p.adp < (pick - buf);
+}
+
+// Demote "likely already gone now" in the score (don't hide—just downweight)
+function liveNowFactor(p){
+  const pick=currentPick();
+  const buf=Math.max(1, Math.round(getADPVariance(pick)/4)); // 1/2/3 by round
+  if (!isFinite(p.adp)) return 1.0;
+  if (p.adp < pick - buf) return 0.5;    // probably gone -> moderate demotion (was 0.12)
+  if (p.adp <= pick)      return 0.95;   // at/past ADP -> tiny discount (was 0.85)
+  return 1.0;
+}
+
+// Probability the player is still available right now
+function probabilityLive(player) {
+  if (!isFinite(player.adp) || player.adp <= 0) return 1.0;
+  
+  const pick = currentPick();
+  const variance = getADPVariance(pick);
+  
+  // If we're before their ADP, high probability they're available
+  if (pick <= player.adp) return 0.95;
+  
+  // Past their ADP - use normal distribution to estimate availability
+  const z = (pick - player.adp) / variance;
+  const prob = Math.max(0.05, Math.min(0.95, 1 - normCdf(z)));
+  
+  return prob;
+}
+
+/*** ---------- Parsers ---------- ***/
+function parseRGDK(csv){
+  try {
+    const rows=csv.trim().split(/\r?\n/); 
+    const d=detectDelim(rows[0]);
+    const H=splitCSV(rows[0],d).map(h=>h.toLowerCase().trim());
+    
+    showDebug(`RGDK Headers found: ${H.join(', ')}`);
+    
+    const I=(name)=>H.indexOf(name);
+    const idx={ 
+      name:I('name'), 
+      pos:I('pos'), 
+      position:I('position'), 
+      team:I('team'),
+      ud_rank:I('ud rank'),
+      dk_rank:I('dk rank'),
+      ud_adp:I('ud adp'),       
+      dk_adp:I('dk adp'),
+      ud_proj:I('underdog'), 
+      dk_proj:I('draftkings') 
+    };
+    
+    const out=[];
+    for(let r=1;r<rows.length;r++){
+      const v=splitCSV(rows[r],d);
+      const name=idx.name>=0?v[idx.name]:'';
+      if(!name) continue;
+      
+      // get position from 'pos' or fallback
+      let rawPos = '';
+      if(idx.pos>=0) rawPos = v[idx.pos];
+      if(!rawPos && I('pos')>=0) rawPos = v[I('pos')];
+      
+      // get team from available columns
+      let rawTeam = '';
+      if(idx.team>=0) rawTeam = v[idx.team];
+      else if(idx.position>=0) rawTeam = v[idx.position]; // In sample, 'Position' column has team
+      
+      const pos=(rawPos||'').toUpperCase().trim();
+      const team=((rawTeam||'').toUpperCase().replace(/[^A-Z]/g,'').trim())||'UNK';
+      
+      if(!/^(QB|RB|WR|TE)$/.test(pos)) continue;
+      
+      const dkAdp=idx.dk_adp>=0?parseFloat(v[idx.dk_adp]):NaN;
+      const udAdp=idx.ud_adp>=0?parseFloat(v[idx.ud_adp]):NaN;
+      const adp = isFinite(dkAdp)?dkAdp:(isFinite(udAdp)?udAdp:999);
+      
+      const dkRank=idx.dk_rank>=0?parseInt(v[idx.dk_rank]):NaN;
+      const rank = isFinite(dkRank)?dkRank:999;  // Only use DK rank
+      
+      const dkProj=idx.dk_proj>=0?parseFloat(v[idx.dk_proj]):NaN;      
+      const udProj=idx.ud_proj>=0?parseFloat(v[idx.ud_proj]):NaN;
+      const proj = isFinite(dkProj)?dkProj:(isFinite(udProj)?udProj:0);
+      
+      out.push({
+        name, 
+        team, 
+        position:pos, 
+        adp, 
+        rank,
+        projectedpoints:proj, 
+        ceiling:proj*1.5
+      });
+    }
+    
+    showDebug(`Parsed ${out.length} players from RGDK`);
+    // saveState handled by caller
+    return out;
+  } catch(e) {
+    showDebug(`Error parsing RGDK: ${e.message}`);
+    return [];
+  }
+}
+
+function buildProfileFromUDR4(csv){
+  try {
+    const rows=csv.trim().split(/\r?\n/); 
+    const d=detectDelim(rows[0]);
+    const H=splitCSV(rows[0],d).map(h=>h.toLowerCase().trim());
+    
+    showDebug(`UD R4 Headers: ${H.slice(0,10).join(', ')}...`);
+    
+    const I=(name)=>H.indexOf(name);
+    const idT=I('tournament_entry_id'), posI=I('position_name'), pickI=I('overall_pick_number');
+    
+    if(idT<0||posI<0||pickI<0) {
+      showDebug(`Missing UD columns: id=${idT}, pos=${posI}, pick=${pickI}`);
+      return null;
+    }
+    
+    const TEAMS_PER_DRAFT=12;
+    const rosters={};    for(let r=1;r<rows.length;r++){
+      const v=splitCSV(rows[r],d);
+      const rid=v[idT]; 
+      const p=(v[posI]||'').toUpperCase(); 
+      const pick=parseInt(v[pickI]);
+      if(!rid || !/^(QB|RB|WR|TE)$/.test(p) || !pick) continue;
+      
+      const round=Math.floor((pick-1)/TEAMS_PER_DRAFT)+1;
+      rosters[rid]=rosters[rid]||{counts:{QB:0,RB:0,WR:0,TE:0},first:{}};
+      rosters[rid].counts[p]++; 
+      rosters[rid].first[p]=Math.min(rosters[rid].first[p]||1e9, round);
+    }
+    
+    const qb=[],rb=[],wr=[],te=[],qb1=[],rb1=[],wr1=[],te1=[], pcPerQB=[];
+    Object.values(rosters).forEach(R=>{
+      qb.push(R.counts.QB); 
+      rb.push(R.counts.RB); 
+      wr.push(R.counts.WR); 
+      te.push(R.counts.TE);
+      qb1.push(R.first.QB||18); 
+      rb1.push(R.first.RB||18); 
+      wr1.push(R.first.WR||18); 
+      te1.push(R.first.TE||18);
+      const pc=R.counts.WR+R.counts.TE; 
+      pcPerQB.push(pc/Math.max(1,R.counts.QB));
+    });
+    
+    const mk=(arr)=>({min:Math.round(quantile(arr,0.10)), optimal:modeInt(arr), max:Math.round(quantile(arr,0.90))});
+    PROFILE.targets={QB:mk(qb), RB:mk(rb), WR:mk(wr), TE:mk(te)};
+    PROFILE.timing={RB:Math.round(quantile(rb1,0.5)), QB:Math.round(quantile(qb1,0.5)),                     WR:Math.round(quantile(wr1,0.5)), TE:Math.round(quantile(te1,0.5))};
+    PROFILE.desiredPassCatchersPerQB = Math.max(1.5, Math.min(2.5, quantile(pcPerQB,0.5)));
+    
+    document.getElementById('profileBadge').textContent =
+      `Profile: QB ${PROFILE.targets.QB.optimal} · RB ${PROFILE.targets.RB.optimal} · WR ${PROFILE.targets.WR.optimal} · TE ${PROFILE.targets.TE.optimal} · PC/QB≈${PROFILE.desiredPassCatchersPerQB.toFixed(1)}`;
+    
+    showDebug(`Profile learned from ${Object.keys(rosters).length} rosters`);
+    // Profile will be saved by the caller
+    return true;
+  } catch(e) {
+    showDebug(`Error parsing UD R4: ${e.message}`);
+    return null;
+  }
+}
+
+/*** ---------- Sharp EV Scoring with Edge ---------- ***/
+const W = { 
+  proj: 0.15,      // Raw projection matters less than edge
+  vorp: 2.00,      // VORP is king in best ball
+  struct: 1.50,    // Structure matters for advancement
+  stack: 0.80,     // Correlation plays
+  urgency: 1.60,  // don't miss your guys
+  valueNow: 0.20,  // Small ADP value bonus
+  scarcity: 1.00   // Position scarcity
+};
+
+const POS_MULT = { QB: 0.85, RB: 1.00, WR: 1.00, TE: 1.00 };
+const STARTABLE = { QB: 24, RB: 60, WR: 84, TE: 24 };
+
+function estimateReplacement(pos, pickNow, window){
+  // Cache key includes position and pick range - include TE fix in key
+  const cacheKey = `${pos}_${pickNow}_${window}_v2`;
+  if (replCache.has(cacheKey)) {
+    return replCache.get(cacheKey);
+  }
+  
+  const pool = available.filter(p=>p.position===pos).sort((a,b)=>b.projectedpoints-a.projectedpoints);
+  if (!pool.length) {
+    replCache.set(cacheKey, 0);
+    return 0;
+  }
+  
+  // Use top N players based on round depth
+  const N = pickNow<=36 ? 3 : pickNow<=72 ? 5 : 8;
+  let wsum=0, psum=0;
+  
+  for (const x of pool.slice(0,N)) {
+    const pav = probAvailableAtNext(x.adp, pickNow, window);
+    if (pav>0) { 
+      wsum += pav; 
+      psum += pav * x.projectedpoints; 
+    }
+  }
+  
+  let result = wsum ? (psum/wsum) : 0;
+  
+  // Adjust TE replacement value to reduce artificial scarcity
+  if (pos === 'TE' && result < 220) {
+    result = 220; // Floor TE replacement at 220 to reduce VORP gap
+  }
+  
+  replCache.set(cacheKey, result);
+  return result;
+}
+
+function structureBonus(player){
+  const t = PROFILE.targets[player.position] || {min:0, optimal:99, max:99};
+  const have = roster[player.position].length;
+  
+  // Hard gates to prevent roster construction disasters
+  if (have >= t.max) return -100;  // Hard no
+  if (have < t.min) return 40;     // Must draft
+  if (have < t.optimal) return 20; // Want more
+  return 5;                         // Nice to have
+}
+
+function scarcityBonus(player){
+  const pos = player.position;
+  // Use effective pool (don't count likely-gone players)
+  const left = available.filter(p => p.position===pos && !likelyOffBoard(p)).length;
+  const STARTABLE = { QB:24, RB:60, WR:84, TE:24 };
+  const need = STARTABLE[pos] - roster[pos].length;
+  const r = need / Math.max(1, left);
+  if (r > 0.30) return 20;
+  if (r > 0.20) return 10;
+  if (r > 0.10) return 5;
+  return 0;
+}
+
+function stackBonus(player){
+  if (!player.team || player.team==='UNK') return 0;
+  
+  let b = 0;
+  const pcs = roster.WR.concat(roster.TE).filter(p=>p.team===player.team).length;
+  const haveQB = roster.QB.some(q=>q.team===player.team);
+  
+  // QB-PC stacking bonuses
+  if (player.position==='WR' || player.position==='TE') {
+    if (haveQB) { 
+      b += 28; 
+      if (pcs >= 1) b += 12;  // Double stack bonus
+    }
+  }
+  if (player.position==='QB') {
+    if (pcs >= 2) b += 28;      // Already have receivers
+    else if (pcs === 1) b += 16;
+  }
+  
+  // PC/QB ratio optimization
+  const desired = PROFILE.desiredPassCatchersPerQB || 2.0;
+  const qbCount = Math.max(1, roster.QB.length + (player.position==='QB' ? 1 : 0));
+  const pcTotal = roster.WR.length + roster.TE.length + 
+                  ((player.position==='WR' || player.position==='TE') ? 1 : 0);
+  const ratio = pcTotal / qbCount;
+  
+  if (ratio < desired && (player.position==='WR' || player.position==='TE')) {
+    b += 10;  // need pass catchers
+  }
+  
+  return b;
+}
+
+// Early-round reach guardrail (prevents ADP 18 at pick 1 from topping)
+function reachGuardrail(player){
+  if (!isFinite(player.adp)) return 0;
+  const pick = currentPick();
+  const v    = getADPVariance(pick);
+  const reach = player.adp - pick;      // >0 means you'd be reaching
+  if (reach <= 0) return 0;             // not a reach
+  // tolerate small reach (<= v/2), penalize beyond that, stronger early
+  const excess = Math.max(0, reach - v/2);
+  const roundFactor = (pick<=36)? 2.0 : (pick<=120? 1.2 : 0.8); // R1–3 > R4–10 > R11+
+  return - roundFactor * 3.5 * excess;  // linear, simple, effective
+}
+
+function urgencyPressure(player, pick, window, repl){
+  // Add planning cushion
+  const cushion = pick <= 36 ? 2 : pick <= 120 ? 4 : 6;
+  const planningWindow = window + cushion;
+  
+  const pav = probAvailableAtNext(player.adp, pick, planningWindow);
+  const miss = 1 - pav;
+  const vorp = Math.max(0, player.projectedpoints - repl);
+  const urgency = miss * vorp;
+  
+  // Progressive urgency cap based on position need
+  const have = roster[player.position].length;
+  const targets = PROFILE.targets[player.position] || {min: 1, optimal: 1};
+  
+  let maxUrgency;
+  if (have >= targets.optimal) {
+    maxUrgency = 10;  // Have enough - cap urgency low
+  } else if (have >= targets.min) {
+    maxUrgency = 35;  // Have minimum but want more - moderate cap
+  } else {
+    maxUrgency = 999; // Still need minimum - no cap
+  }
+  
+  return Math.min(urgency, maxUrgency);
+}
+
+function EVscore(player){
+  // Check cache first
+  const cacheKey = `${player.name}_${totalPicks}_${roster.QB.length}_${roster.RB.length}_${roster.WR.length}_${roster.TE.length}`;
+  if (scoreCache.has(cacheKey)) {
+    return scoreCache.get(cacheKey);
+  }
+  
+  const pick = currentPick();
+  const window = picksToNextMine(pick);
+  
+  // Check hard caps first
+  const t = PROFILE.targets[player.position] || {max: 99};
+  if (roster[player.position].length >= t.max) {
+    scoreCache.set(cacheKey, -1e9);
+    return -1e9;
+  }
+  
+  const repl = estimateReplacement(player.position, pick, window);
+  
+  // Calculate base EV components (without reach penalty)
+  const baseEV = W.proj * player.projectedpoints
+               + W.vorp * (player.projectedpoints - repl)
+               + W.struct * structureBonus(player)
+               + W.stack * stackBonus(player)
+               + W.urgency * urgencyPressure(player, pick, window, repl)
+               + W.scarcity * scarcityBonus(player);
+
+  // Dominance override: if this player's base EV beats the next best alternative by a clear margin,
+  // don't apply the reach penalty (rare, but keeps true outliers viable).
+  const OVERRIDE_MARGIN = 18;  // ~0.5 pts/week over replacement
+  let applyReachPenalty = true;
+  
+  if (pick <= 36) { // only care in early rounds
+    // Compute the best alternative now (any position), excluding this exact player
+    const bestAltBase = available
+      .filter(x => x !== player)  // identity check; OK in our small slice
+      .map(x => {
+        const replAlt = estimateReplacement(x.position, pick, window);
+        return  W.proj * x.projectedpoints
+              + W.vorp * (x.projectedpoints - replAlt)
+              + W.struct * structureBonus(x)
+              + W.stack * stackBonus(x)
+              + W.urgency * urgencyPressure(x, pick, window, replAlt)
+              + W.scarcity * scarcityBonus(x);
+      })
+      .reduce((m,v)=> v>m?v:m, -1e9);
+
+    if ((baseEV - bestAltBase) >= OVERRIDE_MARGIN) {
+      applyReachPenalty = false; // truly dominant; allow the reach
+    }
+  }
+
+  // Now add (or skip) the reach guardrail
+  let score = baseEV;
+  if (applyReachPenalty) score += reachGuardrail(player);
+  
+  // Apply position multiplier
+  score = score * (POS_MULT[player.position] || 1);
+  
+  // Cache the result
+  scoreCache.set(cacheKey, score);
+  return score;
+}
+
+/*** ---------- Render & interactions ---------- ***/
+function updateStats(){
+  // Show detailed pick info with next picks
+  const pick = currentPick();
+  const gap1 = picksToNextMine(pick);
+  const myNext = pick + gap1;
+  const gap2 = picksToNextMine(myNext + 1);
+  const myNext2 = myNext + gap2;
+  
+  const round = Math.ceil(pick / DRAFT.teams);
+  const nextRound = Math.ceil(myNext / DRAFT.teams);
+  
+  document.getElementById('roundInfo').textContent = 
+    `Round ${round} · Pick ${pick} · Next: Pick ${myNext} (${gap1} away, R${nextRound})`;
+}
+
+function activeStacks(){
+  const teams=new Map();
+  [...roster.QB, ...roster.WR, ...roster.TE].forEach(p=>{
+    if(p.team==='UNK') return;
+    teams.set(p.team, teams.get(p.team)||{qb:0,pc:0});
+    if(p.position==='QB') teams.get(p.team).qb++;
+    if(p.position==='WR'||p.position==='TE') teams.get(p.team).pc++;
+  });
+  return [...teams.entries()].filter(([t,x])=>x.qb>=1&&x.pc>=1).map(([t,x])=>`${t} ${x.qb}Q×${x.pc}PC`);
+}
+
+function renderRoster(){
+  const r = document.getElementById('roster'); 
+  if (!r) return;
+  
+  let html = '';
+  
+  // Add position sections with player cards
+  const positions = ['QB', 'RB', 'WR', 'TE'];
+  positions.forEach(pos => {
+    if (roster[pos].length > 0) {
+      html += `<div class="roster-position">
+        <h4 class="roster-position-title">${pos} (${roster[pos].length})</h4>
+        <div class="roster-cards">`;
+      
+      // Sort players by projection (highest first) for optimal lineup calculation
+      const sortedPlayers = [...roster[pos]].sort((a,b) => b.projectedpoints - a.projectedpoints);
+      
+      sortedPlayers.forEach((p, index) => {
+        // Mark as starter if within position limits for optimal lineup
+        const isStarter = (pos === 'QB' && index === 0) ||
+                         (pos === 'RB' && index < 2) ||
+                         (pos === 'WR' && index < 3) ||
+                         (pos === 'TE' && index === 0);
+        
+        const playerEV = EVscore(p);
+        
+        html += `<div class="roster-card ${isStarter ? 'roster-starter' : ''}">
+          <div class="roster-position-box ${p.position}">${p.position}</div>
+          <div class="roster-player-info">
+            <div class="roster-player-name">${p.name}</div>
+            <div class="roster-player-meta">${p.team} • ADP ${isFinite(p.adp) ? p.adp.toFixed(1) : '—'} • RK ${isFinite(p.rank) ? p.rank : '—'} • EV ${playerEV.toFixed(1)}</div>
+          </div>
+          <div class="roster-projection">${p.projectedpoints.toFixed(1)}</div>
+          <button class="roster-remove-btn" onclick="removePlayer('${p.name.replace(/'/g,"\\'")}')" title="Remove">✕</button>
+        </div>`;
+      });
+      
+      html += `</div></div>`;
+    }
+  });
+  
+  // Calculate totals for ALL drafted players
+  const allDraftedPlayers = [...roster.QB, ...roster.RB, ...roster.WR, ...roster.TE];
+  const totalProjection = allDraftedPlayers.reduce((sum, p) => sum + p.projectedpoints, 0);
+  const totalEV = allDraftedPlayers.reduce((sum, p) => sum + EVscore(p), 0);
+  
+  // Calculate position counts
+  const positionCounts = {
+    QB: roster.QB.length,
+    RB: roster.RB.length, 
+    WR: roster.WR.length,
+    TE: roster.TE.length
+  };
+  
+  // totals section
+  html += `<div class="roster-totals">
+    <div class="roster-total-item">
+      <span class="roster-total-label">Projected Points:</span>
+      <span class="roster-total-value">${totalProjection.toFixed(1)}</span>
+    </div>
+    <div class="roster-total-item">
+      <span class="roster-total-label">Combined EV Score:</span>
+      <span class="roster-total-value">${totalEV.toFixed(1)}</span>
+    </div>
+    <div class="roster-position-counts">`;
+  
+  // position badges
+  Object.entries(positionCounts).forEach(([pos, count]) => {
+    if (count > 0) {
+      html += `<span class="roster-count-badge ${pos}">${count}${pos}</span>`;
+    }
+  });
+  
+  html += `</div>
+  </div>`;
+  
+  r.innerHTML = html || '<div class="meta">No players yet.</div>';
+}
+
+function calculateOptimalLineup() {
+  const allPlayers = [...roster.QB, ...roster.RB, ...roster.WR, ...roster.TE]
+    .sort((a,b) => b.projectedpoints - a.projectedpoints);
+  
+  const lineup = [];
+  const needed = {QB: 1, RB: 2, WR: 3, TE: 1, FLEX: 1};
+  const filled = {QB: 0, RB: 0, WR: 0, TE: 0};
+  
+  // fill required positions
+  allPlayers.forEach(player => {
+    const pos = player.position;
+    if (filled[pos] < needed[pos]) {
+      lineup.push(player);
+      filled[pos]++;
+    }
+  });
+  
+  // fill FLEX
+  if (lineup.length < 8) {
+    const remaining = allPlayers.filter(p => 
+      !lineup.includes(p) && p.position !== 'QB'
+    );
+    if (remaining.length > 0) {
+      lineup.push(remaining[0]);
+    }
+  }
+  
+  return lineup;
+}
+
+function removePlayer(playerName) {
+  // find and remove player
+  let found = false;
+  ['QB', 'RB', 'WR', 'TE'].forEach(pos => {
+    roster[pos] = roster[pos].filter(p => {
+      if (p.name === playerName && !found) {
+        // add back to available
+        available.push(p);
+        found = true;
+        return false;
+      }
+      return true;
+    });
+  });
+  
+  if (found) {
+    totalPicks--;
+    
+    // clear caches
+    clearCaches();
+    
+    // Update current roster in rosters array
+    if (rosters[currentRosterIndex]) {
+      rosters[currentRosterIndex].roster = JSON.parse(JSON.stringify(roster));
+      rosters[currentRosterIndex].totalPicks = totalPicks;
+      rosters[currentRosterIndex].removedPlayers = [...removedPlayers];
+      saveRosters();
+    }
+    
+    saveState();
+    renderRoster();
+    updateStats();
+    renderCards();
+    showDebug(`Removed ${playerName} from roster`);
+  }
+}
+
+function adjustRosterDisplay() {
+  const sidebar = document.getElementById('sidebar');
+  const display = document.getElementById('rostersDisplay');
+  if (!sidebar || !display) return;
+  
+  const sidebarWidth = sidebar.offsetWidth;
+  
+  // show two rosters if wide enough
+  if (sidebarWidth > 700 && rosters.length > 1) {
+    // Find the next roster to show
+    let secondIndex = currentRosterIndex + 1;
+    if (secondIndex >= rosters.length) secondIndex = 0;
+    
+    // Create second roster column
+    display.innerHTML = `
+      <div class="roster-column">
+        <h4 style="font-size: 13px; margin: 0 16px 8px; color: var(--blue);">${rosters[currentRosterIndex].name}</h4>
+        <div id="roster"></div>
+      </div>
+      <div class="roster-column" style="border-left: 1px solid var(--border);">
+        <h4 style="font-size: 13px; margin: 0 16px 8px; color: var(--muted);">${rosters[secondIndex].name}</h4>
+        <div id="roster2"></div>
+      </div>
+    `;
+    
+    // Render both rosters
+    renderRoster();
+    
+    // Render second roster with same formatting
+    const r2 = document.getElementById('roster2');
+    const lines2 = [];
+    const roster2 = rosters[secondIndex].roster;
+    
+    // Add positions in order
+    const positions = ['QB', 'RB', 'WR', 'TE'];
+    positions.forEach(P => {
+      if (roster2[P].length > 0) {
+        lines2.push(`<div style="font-size: 11px; color: var(--muted); margin: 12px 0 4px; text-transform: uppercase; letter-spacing: 0.5px;">${P} (${roster2[P].length})</div>`);
+        roster2[P].forEach(p => {
+          lines2.push(`<div class="slot">${p.name} <span style="color: var(--muted); font-size: 12px;">${p.team}</span> <span class="pts">${p.projectedpoints.toFixed(1)}</span></div>`);
+        });
+      }
+    });
+    
+    // Total for second roster
+    const total2 = [...roster2.QB,...roster2.RB,...roster2.WR,...roster2.TE].reduce((s,p)=>s+p.projectedpoints,0);
+    const breakdown2 = `${roster2.QB.length} QB | ${roster2.RB.length} RB | ${roster2.WR.length} WR | ${roster2.TE.length} TE`;
+    lines2.push(`<div class="slot" style="margin-top: 16px; background: rgba(16, 185, 129, 0.05); border-color: rgba(16, 185, 129, 0.2);">
+      <span style="font-weight: 600;">Total</span>
+      <span>
+        <span class="pts" style="font-size: 16px; font-weight: 600;">${total2.toFixed(1)}</span>
+        <span style="color: var(--muted); font-size: 11px; margin-left: 8px;">${breakdown2}</span>
+      </span>
+    </div>`);
+    
+    r2.innerHTML = lines2.join('') || '<div class="meta">No players yet.</div>';
+  } else {
+    // Single roster view
+    display.innerHTML = `
+      <div class="roster-column">
+        <div id="roster"></div>
+      </div>
+    `;
+    renderRoster();
+  }
+}
+
+function adjustRosterColumns() {
+  // This is now just adjustRosterDisplay
+  adjustRosterDisplay();
+}
+
+function renderCards(){
+  const mainContainer = document.getElementById('cards');
+  
+  // Always show search bar first in main panel
+  let searchHtml = `
+    <div class="search-card">
+      <div class="search-icon">🔍</div>
+      <input type="text" 
+             class="search-input" 
+             id="playerSearch"
+             placeholder="Search players by name, team, or position..." 
+             value="${searchQuery}"
+             oninput="onSearch(this.value)">
+      <button class="search-clear" onclick="clearSearch()">Clear</button>
+    </div>
+  `;
+  
+  if(!available.length){ 
+    mainContainer.innerHTML = searchHtml + '<div class="meta">No players loaded.</div>';
+    return; 
+  }
+  
+  // Calculate scores for all available players
+  const allWithScores = available
+    .map(p => { 
+      const ev = EVscore(p);
+      const lnf = liveNowFactor(p);
+      p.ev = ev; // Set the actual .ev property on original player
+      return {...p, _ev: ev, _eff: ev * lnf}; 
+    });
+  
+  // Apply search filter to ALL players first
+  let filtered = allWithScores;
+  if(searchQuery) {
+    const query = searchQuery.toLowerCase();
+    filtered = allWithScores.filter(p => 
+      p.name.toLowerCase().includes(query) ||
+      p.team.toLowerCase().includes(query) ||
+      p.position.toLowerCase().includes(query)
+    );
+  }
+  
+  // Sort and limit for display
+  const ranked = allWithScores
+    .sort((a,b) => b._eff - a._eff)
+    .slice(0, 30);
+  
+  const players = filtered
+    .sort((a,b) => b._eff - a._eff);
+  
+  // Update sticky urgent tracking
+  updateStickyUrgent(available); // inspect all available players for urgency
+  
+  // dedupe sticky from main
+  const sticky = ranked.filter(p => stickyUrgent.has(p.name)).slice(0, 8);
+  const stickySet = new Set(sticky.map(p => p.name));
+  const main = players.filter(p => !stickySet.has(p.name)).slice(0, 20);
+  const stickyContainer = document.getElementById('stickyUrgentContainer');
+  const stickyElement = document.getElementById('stickyUrgent');
+  
+  if (sticky.length > 0 && stickyContainer && stickyElement) {
+    const stickyHTML = sticky.map(p => {
+      const safeName = p.name.replace(/'/g, "\\'");
+      const badges = [];
+      if(stackBonus(p) > 0) badges.push('<span class="badge stack">STACK</span>');
+      
+      // Calculate urgency for color coding
+      const urgency = urgencyPressure(p, currentPick(), picksToNextMine(currentPick()), estimateReplacement(p.position, currentPick(), picksToNextMine(currentPick())));
+      
+      // Determine chip urgency class
+      let chipClass = 'urgent-chip';
+      if (urgency > 50) chipClass += ' chip-red';
+      else if (urgency > 25) chipClass += ' chip-orange';
+      else if (urgency > 10) chipClass += ' chip-yellow';
+      
+      return `<div class="${chipClass}">
+        <div class="chip-adp">
+          <div class="chip-adp-label">ADP</div>
+          <div class="chip-adp-value">${isFinite(p.adp)?p.adp.toFixed(1):'—'}</div>
+        </div>
+        <div class="chip-main">
+          <div class="chip-header">
+            <div class="chip-name">${p.name}</div>
+            <div class="chip-position ${p.position}">${p.position}</div>
+            <div class="chip-team">${p.team}</div>
+            ${badges.join('')}
+          </div>
+          <div class="chip-stats">
+            <div class="chip-stat">
+              <div class="chip-stat-value">${p.projectedpoints.toFixed(1)}</div>
+              <div class="chip-stat-label">PTS</div>
+            </div>
+            <div class="chip-stat">
+              <div class="chip-stat-value">#${isFinite(p.rank)?p.rank:'—'}</div>
+              <div class="chip-stat-label">RNK</div>
+            </div>
+            <div class="chip-stat">
+              <div class="chip-stat-value">+${Math.max(0, p.projectedpoints - estimateReplacement(p.position, currentPick(), picksToNextMine(currentPick()))).toFixed(1)}</div>
+              <div class="chip-stat-label">VORP</div>
+            </div>
+            <div class="chip-stat">
+              <div class="chip-stat-value">${p._ev.toFixed(1)}</div>
+              <div class="chip-stat-label">EV</div>
+            </div>
+          </div>
+        </div>
+        <div class="chip-actions">
+          <button class="chip-btn chip-draft" onclick="onDraft('${safeName}')">✓</button>
+          <button class="chip-btn chip-pass" onclick="onPass('${safeName}')">✕</button>
+        </div>
+      </div>`;
+    }).join('');
+    stickyElement.innerHTML = stickyHTML;
+    stickyContainer.style.display = 'block';
+  } else if (stickyContainer) {
+    stickyContainer.style.display = 'none';
+  }
+
+  // Build card HTML
+  const buildCard = (p) => {
+    const badges = [];
+    if(stackBonus(p) > 0) badges.push('<span class="badge stack">STACK</span>');
+    
+    // Calculate urgency for color coding
+    const urgency = urgencyPressure(p, currentPick(), picksToNextMine(currentPick()), estimateReplacement(p.position, currentPick(), picksToNextMine(currentPick())));
+    
+    // Determine card urgency class
+    let cardClass = 'card';
+    if (urgency > 50) cardClass += ' card-red';        // Almost certainly gone
+    else if (urgency > 25) cardClass += ' card-orange'; // likely gone
+    else if (urgency > 10) cardClass += ' card-yellow'; // may be gone
+    
+    return `<div class="${cardClass}">
+      <div class="adp-box">
+        <div class="adp-label">ADP</div>
+        <div class="adp-value">${isFinite(p.adp)?p.adp.toFixed(1):'—'}</div>
+      </div>
+      <div class="player-section">
+        <div class="player-top">
+          <div class="player-name">${p.name}</div>
+          <div class="position ${p.position}">${p.position}</div>
+          <div class="team-badge">${p.team}</div>
+          ${badges.join('')}
+        </div>
+        <div class="player-stats">
+          <div class="stat-item">
+            <div class="stat-value">${p.projectedpoints.toFixed(1)}</div>
+            <div class="stat-label">PROJ PTS</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">#${isFinite(p.rank)?p.rank:'—'}</div>
+            <div class="stat-label">RANK</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">+${Math.max(0, p.projectedpoints - estimateReplacement(p.position, currentPick(), picksToNextMine(currentPick()))).toFixed(1)}</div>
+            <div class="stat-label">VORP</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">${p._ev.toFixed(1)}</div>
+            <div class="stat-label">EV</div>
+          </div>
+        </div>
+      </div>
+      <div class="right-section">
+        <div class="ev-score">
+          <div class="ev-label">SCORE</div>
+          <div class="ev-value">${p._ev.toFixed(1)}</div>
+        </div>
+        <div class="actions">
+          <button class="btn-draft" title="Draft ✓" onclick="onDraft('${p.name.replace(/'/g,"\\'")}')" >✓</button>
+          <button class="btn-pass" title="Off board ✕" onclick="onPass('${p.name.replace(/'/g,"\\'")}')" >✕</button>
+        </div>
+      </div>
+    </div>`;
+  };
+  
+  // Render all cards in single column using deduplicated main list
+  const cardsHtml = main.length ? main.map(buildCard).join('') : '<div class="meta">No available players.</div>';
+  mainContainer.innerHTML = searchHtml + cardsHtml;
+}
+
+let searchTimeout;
+function onSearch(value) {
+  // Update search box immediately for responsive feel
+  searchQuery = value;
+  
+  // Store cursor position and focus state
+  const searchInput = document.getElementById('playerSearch');
+  const cursorPosition = searchInput ? searchInput.selectionStart : 0;
+  const wasFocused = document.activeElement === searchInput;
+  
+  // Debounce the actual render
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    renderCards();
+    
+    // Restore focus and cursor position after render
+    if (wasFocused) {
+      const newSearchInput = document.getElementById('playerSearch');
+      if (newSearchInput) {
+        newSearchInput.focus();
+        newSearchInput.setSelectionRange(cursorPosition, cursorPosition);
+      }
+    }
+  }, 300);  // 300ms delay
+}
+
+function clearSearch() {
+  searchQuery = '';
+  renderCards();
+  // Focus back to search input after clearing
+  const searchInput = document.getElementById('playerSearch');
+  if(searchInput) {
+    searchInput.focus();
+  }
+}
+
+// Function removed - no more ghost logic
+
+function onDraft(name){
+  const p=available.find(x=>x.name===name); 
+  if(!p) return;
+  
+  // Save action for undo
+  saveAction({type: 'draft', player: p});
+  
+  // Remove from sticky when resolved
+  stickyUrgent.delete(p.name);
+  
+  roster[p.position].push(p);  
+  available=available.filter(x=>x!==p);
+  totalPicks++;
+  
+  // Advance the live draft pick
+  advanceDraftPick();
+  
+  // clear caches
+  clearCaches();
+  
+  saveState();  // Save after each action
+  renderRoster(); 
+  updateStats(); 
+  renderCards();
+}
+
+function onPass(name){
+  const p=available.find(x=>x.name===name); 
+  if(!p) return;
+  
+  // Save action for undo
+  saveAction({type: 'pass', player: p});
+  
+  // Remove from sticky when resolved
+  stickyUrgent.delete(p.name);
+  
+  available=available.filter(x=>x!==p);
+  removedPlayers.push(p.name);  // Track removed player
+  
+  // Advance the live draft pick
+  advanceDraftPick();
+  
+  // clear caches when board changes
+  clearCaches();
+  
+  saveState();  // Save after each action
+  updateStats(); 
+  renderCards();
+}
+
+/*** ---------- Wiring - Must be before any function calls ---------- ***/
+window.onDraft = onDraft;
+window.onPass = onPass;
+window.clearDraft = clearDraft;
+window.onSearch = onSearch;
+window.clearSearch = clearSearch;
+// removed ghost functions
+window.undo = undo;
+window.saveCurrentRoster = saveCurrentRoster;
+window.createNewRoster = createNewRoster;
+window.removePlayer = removePlayer;
+
+document.addEventListener('DOMContentLoaded', function(){
+  // Load state (includes current roster)
+  loadState();
+  
+  // Auto-load CSV data if previously saved
+  const savedRGDK = localStorage.getItem('bbgm_rgdk_csv');
+  const savedUDR4 = localStorage.getItem('bbgm_udr4_csv');
+  
+  if (savedRGDK) {
+    players = parseRGDK(savedRGDK);
+    // Rebuild available list excluding drafted/removed players
+    available = players.filter(p => 
+      !roster.QB.some(ros=>ros.name===p.name) &&
+      !roster.RB.some(ros=>ros.name===p.name) &&
+      !roster.WR.some(ros=>ros.name===p.name) &&
+      !roster.TE.some(ros=>ros.name===p.name) &&
+      !removedPlayers.includes(p.name)
+    );
+    showDebug('RGDK rankings restored from previous session');
+  }
+  
+  if (savedUDR4) {
+    buildProfileFromUDR4(savedUDR4);
+    showDebug('UD Round-4 profile restored from previous session');
+  }
+  
+  // Render roster list
+  renderRosterList();
+  
+  // Draft slot options
+  const ds=document.getElementById('draftSlot');
+  for(let i=1; i<=12; i++){
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = i;
+    ds.appendChild(opt);
+  }
+  ds.value = DRAFT.mySlot;  // Use loaded value
+  ds.addEventListener('change', function(){     DRAFT.mySlot = parseInt(ds.value); 
+    showDebug(`Draft slot changed to ${DRAFT.mySlot}`);
+    saveState();
+    renderCards(); 
+  });
+
+  // Clear button
+  document.getElementById('clearBtn').addEventListener('click', function(){
+    if(confirm('Clear draft? This will reset your roster but keep loaded CSVs.')) {
+      clearDraft();
+    }
+  });
+
+  // RGDK loader
+  document.getElementById('rgdkFile').addEventListener('change', function(e){
+    const f=e.target.files[0];
+    if(!f) return;
+    if(!f.name.toLowerCase().endsWith('.csv')) {
+      showDebug('Please select a CSV file');
+      return;
+    }
+    const r=new FileReader();
+    r.onload = function(ev){
+      const csvContent = ev.target.result;
+      players = parseRGDK(csvContent);
+      available = [...players];
+      
+      // persist
+      localStorage.setItem('bbgm_rgdk_csv', csvContent);
+      localStorage.setItem('bbgm_players', JSON.stringify(players));
+      
+      renderCards(); 
+      updateStats();
+      showDebug('RGDK rankings loaded and saved');
+    }; 
+    r.readAsText(f);
+  });
+
+  // UD Round-4 loader
+  document.getElementById('udr4File').addEventListener('change', function(e){
+    const f=e.target.files[0];
+    if(!f) return;
+    if(!f.name.toLowerCase().endsWith('.csv')) {
+      showDebug('Please select a CSV file');
+      return;
+    }
+    const r=new FileReader();
+    r.onload = function(ev){
+      const csvContent = ev.target.result;
+      buildProfileFromUDR4(csvContent);
+      
+      // persist
+      localStorage.setItem('bbgm_udr4_csv', csvContent);
+      localStorage.setItem('bbgm_profile', JSON.stringify(PROFILE));
+      
+      renderCards(); // re-rank using learned profile
+      showDebug('UD Round-4 profile loaded and saved');
+    }; 
+    r.readAsText(f);
+  });
+
+  renderCards(); 
+  renderRoster(); 
+  updateStats();
+  
+  // Draggable divider functionality (single divider)
+  const divider1 = document.getElementById('divider1');
+  const mainPanel = document.getElementById('mainPanel');
+  const sidebar = document.getElementById('sidebar');
+  
+  let isResizing = false;
+  let startX = 0;
+  let startSidebarWidth = 0;
+  
+  // Single divider (between main and sidebar)
+  if (divider1) {
+    divider1.addEventListener('mousedown', (e) => {
+      isResizing = true;
+      startX = e.clientX;
+      const computedStyle = window.getComputedStyle(sidebar);
+      startSidebarWidth = parseInt(computedStyle.width, 10);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+  }
+  
+  document.addEventListener('mousemove', (e) => {
+    if (!isResizing) return;
+    
+    const deltaX = e.clientX - startX;
+    
+    // Resizing sidebar from the left
+    const newSidebarWidth = startSidebarWidth - deltaX;
+    
+    // Set minimum and maximum widths for sidebar
+    const minSidebarWidth = 300;
+    const maxSidebarWidth = 800;
+    
+    if (newSidebarWidth >= minSidebarWidth && newSidebarWidth <= maxSidebarWidth) {
+      sidebar.style.width = `${newSidebarWidth}px`;
+      adjustRosterColumns(); // Adjust roster display on resize
+    }
+  });
+  
+  document.addEventListener('mouseup', () => {
+    if (isResizing) {
+      isResizing = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+  });
+  
+  // Adjust roster columns on window resize
+  window.addEventListener('resize', adjustRosterColumns);
+});
+</script>
+</body>
+</html>

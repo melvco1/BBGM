@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check localStorage Data</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #fff; }
+        .found { color: #4f9; }
+        .missing { color: #f66; }
+        pre { background: #333; padding: 10px; border-radius: 5px; overflow: auto; }
+    </style>
+</head>
+<body>
+    <h2>Checking BBGM localStorage Data</h2>
+    <div id="output"></div>
+    
+    <script>
+        const output = document.getElementById('output');
+        let html = '';
+        
+        // Check old keys
+        const oldKeys = ['bbgm_roster', 'bbgm_totalPicks', 'bbgm_removedPlayers'];
+        html += '<h3>Old System Keys:</h3>';
+        
+        oldKeys.forEach(key => {
+            const value = localStorage.getItem(key);
+            if (value) {
+                html += `<div class="found">✓ ${key} found</div>`;
+                if (key === 'bbgm_roster') {
+                    try {
+                        const roster = JSON.parse(value);
+                        const counts = {
+                            QB: roster.QB?.length || 0,
+                            RB: roster.RB?.length || 0,
+                            WR: roster.WR?.length || 0,
+                            TE: roster.TE?.length || 0
+                        };
+                        html += `<pre>Players: QB(${counts.QB}), RB(${counts.RB}), WR(${counts.WR}), TE(${counts.TE})</pre>`;
+                        
+                        // Show first player of each position if exists
+                        ['QB', 'RB', 'WR', 'TE'].forEach(pos => {
+                            if (roster[pos]?.length > 0) {
+                                html += `<pre>First ${pos}: ${roster[pos][0].name}</pre>`;
+                            }
+                        });
+                    } catch(e) {
+                        html += `<pre>Error parsing: ${e}</pre>`;
+                    }
+                } else {
+                    html += `<pre>${value}</pre>`;
+                }
+            } else {
+                html += `<div class="missing">✗ ${key} not found</div>`;
+            }
+        });
+        
+        // Check new key
+        html += '<h3>New System Key:</h3>';
+        const newRosters = localStorage.getItem('bbgm_rosters');
+        if (newRosters) {
+            html += '<div class="found">✓ bbgm_rosters found</div>';
+            try {
+                const rosters = JSON.parse(newRosters);
+                html += `<pre>Number of rosters: ${rosters.length}</pre>`;
+                rosters.forEach((r, i) => {
+                    const counts = {
+                        QB: r.roster?.QB?.length || 0,
+                        RB: r.roster?.RB?.length || 0,
+                        WR: r.roster?.WR?.length || 0,
+                        TE: r.roster?.TE?.length || 0
+                    };
+                    html += `<pre>Roster ${i+1} "${r.name}": QB(${counts.QB}), RB(${counts.RB}), WR(${counts.WR}), TE(${counts.TE}), Picks: ${r.totalPicks}</pre>`;
+                });
+            } catch(e) {
+                html += `<pre>Error parsing: ${e}</pre>`;
+            }
+        } else {
+            html += '<div class="missing">✗ bbgm_rosters not found</div>';
+        }
+        
+        output.innerHTML = html;
+    </script>
+</body>
+</html>
